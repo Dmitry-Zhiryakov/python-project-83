@@ -2,9 +2,17 @@ import os
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash, get_flashed_messages
 from datetime import date
 from page_analyzer.validator import validate, normalize
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    get_flashed_messages
+)
 
 
 app = Flask(__name__)
@@ -46,8 +54,10 @@ def add_url():
     normalized_url = normalize(url)
     conn = psycopg2.connect(DATABASE_URL)
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-        curs.execute('INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id;',
-                     (normalized_url, date.today()))
+        curs.execute(
+            'INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id;',
+            (normalized_url, date.today())
+        )
         data = curs.fetchone()
         conn.commit()
     conn.close()
