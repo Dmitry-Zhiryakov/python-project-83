@@ -4,7 +4,7 @@ from psycopg2.extras import NamedTupleCursor
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, get_flashed_messages
 from datetime import date
-from page_analyzer.validator import validate
+from page_analyzer.validator import validate, normalize
 
 
 app = Flask(__name__)
@@ -21,10 +21,10 @@ def index():
 
 
 @app.get('/urls')
-def urls_get():
+def get_urls():
     conn = psycopg2.connect(DATABASE_URL)
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-        curs.execute('SELECT id, name FROM urls ORDER BY created_at DESC;')
+        curs.execute('SELECT id, name FROM urls ORDER BY id DESC;')
         urls = curs.fetchall()
         return render_template('urls.html',
                                urls=urls
@@ -43,10 +43,11 @@ def add_url():
             url=url
         )
 
+    normalized_url = normalize(url)
     conn = psycopg2.connect(DATABASE_URL)
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
         curs.execute('INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id;',
-                     (url, date.today()))
+                     (normalized_url, date.today()))
         data = curs.fetchone()
         conn.commit()
     conn.close()
