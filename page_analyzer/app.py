@@ -54,15 +54,22 @@ def add_url():
     normalized_url = normalize(url)
     conn = psycopg2.connect(DATABASE_URL)
     with conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-        curs.execute(
-            'INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id;',
-            (normalized_url, date.today())
-        )
-        data = curs.fetchone()
-        conn.commit()
+        curs.execute('SELECT id, name FROM urls WHERE name = %s', (normalized_url,))
+        found_url = curs.fetchone()
+        if found_url:
+            id = found_url.id
+            flash('Страница уже существует', 'info')
+        else:
+            curs.execute(
+                'INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id;',
+                (normalized_url, date.today())
+            )
+            data = curs.fetchone()
+            conn.commit()
+            id = data.id
+            flash('Страница успешно добавлена', 'success')
     conn.close()
-    flash('Страница успешно добавлена', 'success')
-    return redirect(url_for('show_url', id=data.id, ))
+    return redirect(url_for('show_url', id=id, ))
 
 
 @app.route('/urls/<int:id>', methods=['GET'])
