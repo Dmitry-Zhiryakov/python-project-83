@@ -12,4 +12,4 @@ CREATE TABLE url_checks (
     title varchar(255),
     description varchar(255),
     created_at date
-;)
+);
