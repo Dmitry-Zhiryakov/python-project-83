@@ -29,7 +29,7 @@ class UrlsRepo(Database):
     def find_all(self):
         with self.conn.cursor(cursor_factory=NamedTupleCursor) as curs:
             curs.execute('''SELECT * FROM urls
-            LEFT JOIN (SELECT id AS check_id, url_id, created_at
+            LEFT JOIN (SELECT id AS check_id, url_id, status_code, created_at
             AS last_check FROM url_checks
             WHERE id IN (SELECT MAX(id) FROM url_checks GROUP BY url_id))
             AS last_checks ON urls.id = last_checks.url_id
@@ -38,14 +38,16 @@ class UrlsRepo(Database):
 
 
 class UrlChecksRepo(Database):
-    def add_check(self, url_id):
+    def add_check(self, url_id, status_code):
         with self.conn.cursor() as curs:
-            curs.execute('''INSERT INTO url_checks (url_id, created_at)
-                         VALUES (%s, %s);''', (url_id, date.today(),))
+            curs.execute(
+                '''INSERT INTO url_checks (url_id, created_at, status_code)
+                VALUES (%s, %s, %s);''', (url_id, date.today(), status_code,))
             self.commit()
 
     def get_checks(self, id):
         with self.conn.cursor(cursor_factory=NamedTupleCursor) as curs:
-            curs.execute('''SELECT * FROM url_checks WHERE url_id = %s
-                         ORDER BY id DESC;''', (id,))
+            curs.execute(
+                '''SELECT * FROM url_checks WHERE url_id = %s
+                ORDER BY id DESC;''', (id,))
             return curs.fetchall()

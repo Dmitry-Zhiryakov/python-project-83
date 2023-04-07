@@ -96,7 +96,17 @@ def show_url(id):
 
 @app.route('/urls/<id>/checks', methods=['POST'])
 def add_check(id):
-    url_checks_repo = UrlChecksRepo()
-    url_checks_repo.add_check(id)
-    url_checks_repo.close()
+    urls_repo = UrlsRepo()
+    url = urls_repo.get_by_id(id)
+    urls_repo.close()
+
+    try:
+        response = requests.get(url.name)
+        url_checks_repo = UrlChecksRepo()
+        url_checks_repo.add_check(id, response.status_code)
+        url_checks_repo.close()
+        flash('Страница успешно проверена', 'success')
+    except Exception:
+        flash('Произошла ошибка при проверке', 'danger')
+
     return redirect(url_for('show_url', id=id))
