@@ -38,11 +38,13 @@ class UrlsRepo(Database):
 
 
 class UrlChecksRepo(Database):
-    def add_check(self, url_id, status_code):
+    def add_check(self, check_result):
         with self.conn.cursor() as curs:
             curs.execute(
-                '''INSERT INTO url_checks (url_id, created_at, status_code)
-                VALUES (%s, %s, %s);''', (url_id, date.today(), status_code,))
+                '''INSERT INTO url_checks (url_id, status_code, h1, title, description, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s);''',
+                (check_result['url_id'], check_result['status_code'], check_result['h1'],
+                 check_result['title'], check_result['description'], date.today(),))
             self.commit()
 
     def get_checks(self, id):

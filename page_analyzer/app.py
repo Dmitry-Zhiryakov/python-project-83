@@ -2,6 +2,7 @@ import os
 import requests
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from datetime import date
 from page_analyzer.validator import validate, normalize
@@ -94,6 +95,20 @@ def show_url(id):
                            )
 
 
+def get_check_result(page):
+    soup = BeautifulSoup(page, 'html.parser')
+
+    h1 = soup.find('h1').string if soup.find('h1') else ''
+    title = soup.find('title').string if soup.find('title') else ''
+    find_description = soup.find('meta', attrs={'name': 'description'})
+    if find_description:
+        description = find_description.get('content', '')
+    else:
+        description = ''
+
+    return {'h1': h1[:255], 'title': title[:255], 'description': description[:255]}
+
+
 @app.route('/urls/<id>/checks', methods=['POST'])
 def add_check(id):
     urls_repo = UrlsRepo()
@@ -103,7 +118,9 @@ def add_check(id):
     try:
         response = requests.get(url.name)
         url_checks_repo = UrlChecksRepo()
-        url_checks_repo.add_check(id, response.status_code)
+        page = response.text
+        check_result = {'url_id': id, 'status_code': response.status_code, **get_check_result(page)}
+        url_checks_repo.add_check(check_result)
         url_checks_repo.close()
         flash('Страница успешно проверена', 'success')
     except Exception:
