@@ -41,7 +41,7 @@ def add_url():
             'index.html',
             errors=errors,
             url=url
-        )
+        ), 422
 
     normalized_url = normalize(url)
     urls_repo = UrlsRepo()
