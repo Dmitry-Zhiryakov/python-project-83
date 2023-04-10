@@ -114,7 +114,7 @@ def add_check(id):
         url_checks_repo.add_check(check_result)
         url_checks_repo.close()
         flash('Страница успешно проверена', 'success')
-    except Exception:
+    except requests.exceptions.ConnectionError:
         flash('Произошла ошибка при проверке', 'danger')
 
     return redirect(url_for('show_url', id=id))
