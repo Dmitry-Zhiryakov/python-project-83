@@ -81,8 +81,8 @@ def show_url(id):
 def get_check_result(page):
     soup = BeautifulSoup(page, 'html.parser')
 
-    h1 = soup.find('h1').string if soup.find('h1') else ''
-    title = soup.find('title').string if soup.find('title') else ''
+    h1 = soup.find('h1').get_text() if soup.find('h1') else ''
+    title = soup.find('title').get_text() if soup.find('title') else ''
     find_description = soup.find('meta', attrs={'name': 'description'})
     if find_description:
         description = find_description.get('content', '')
@@ -104,17 +104,20 @@ def add_check(id):
 
     try:
         response = requests.get(url.name)
-        url_checks_repo = UrlChecksRepo()
-        page = response.text
-        check_result = {
-            'url_id': id,
-            'status_code': response.status_code,
-            **get_check_result(page)
-        }
-        url_checks_repo.add_check(check_result)
-        url_checks_repo.close()
-        flash('Страница успешно проверена', 'success')
-    except requests.exceptions.ConnectionError:
+        response.raise_for_status()
+    except requests.exceptions.RequestException:
         flash('Произошла ошибка при проверке', 'danger')
+        return redirect(url_for('show_url', id=id))
+
+    url_checks_repo = UrlChecksRepo()
+    page = response.text
+    check_result = {
+        'url_id': id,
+        'status_code': response.status_code,
+        **get_check_result(page)
+    }
+    url_checks_repo.add_check(check_result)
+    url_checks_repo.close()
+    flash('Страница успешно проверена', 'success')
 
     return redirect(url_for('show_url', id=id))
