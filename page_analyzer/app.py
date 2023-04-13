@@ -1,7 +1,7 @@
 import os
 import requests
 from page_analyzer.urls_repo import UrlsRepo, UrlChecksRepo
-from page_analyzer.validator import validate, normalize
+from page_analyzer.validator import validate_url, normalize_url
 from bs4 import BeautifulSoup
 from flask import (
     Flask,
@@ -25,9 +25,7 @@ def index():
 
 @app.route('/urls', methods=['GET'])
 def get_urls():
-    urls_repo = UrlsRepo()
-    urls = urls_repo.find_all()
-    urls_repo.close()
+    urls = UrlsRepo.find_all()
     return render_template('urls.html', urls=urls)
 
 
@@ -35,7 +33,7 @@ def get_urls():
 def add_url():
     url = request.form['url']
 
-    errors = validate(url)
+    errors = validate_url(url)
     if errors:
         return render_template(
             'index.html',
@@ -43,33 +41,24 @@ def add_url():
             url=url
         ), 422
 
-    normalized_url = normalize(url)
-    urls_repo = UrlsRepo()
-    found_url = urls_repo.get_by_name(normalized_url)
+    normalized_url = normalize_url(url)
+    found_url = UrlsRepo.get_by_name(normalized_url)
 
     if found_url:
         id = found_url.id
         flash('Страница уже существует', 'info')
     else:
-        id = urls_repo.add_url(normalized_url)
+        id = UrlsRepo.add_url(normalized_url)
         flash('Страница успешно добавлена', 'success')
 
-    urls_repo.close()
     return redirect(url_for('show_url', id=id,))
 
 
 @app.route('/urls/<int:id>', methods=['GET'])
 def show_url(id):
     messages = get_flashed_messages(with_categories=True)
-
-    urls_repo = UrlsRepo()
-    url = urls_repo.get_by_id(id)
-    urls_repo.close()
-
-    url_checks_repo = UrlChecksRepo()
-    checks = url_checks_repo.get_checks(id)
-    url_checks_repo.close()
-
+    url = UrlsRepo.get_by_id(id)
+    checks = UrlChecksRepo.get_checks_by_id(id)
     return render_template(
         'url.html',
         messages=messages,
@@ -97,10 +86,8 @@ def get_check_result(page):
 
 
 @app.route('/urls/<id>/checks', methods=['POST'])
-def add_check(id):
-    urls_repo = UrlsRepo()
-    url = urls_repo.get_by_id(id)
-    urls_repo.close()
+def add_check_url(id):
+    url = UrlsRepo.get_by_id(id)
 
     try:
         response = requests.get(url.name)
@@ -109,15 +96,13 @@ def add_check(id):
         flash('Произошла ошибка при проверке', 'danger')
         return redirect(url_for('show_url', id=id))
 
-    url_checks_repo = UrlChecksRepo()
     page = response.text
     check_result = {
         'url_id': id,
         'status_code': response.status_code,
         **get_check_result(page)
     }
-    url_checks_repo.add_check(check_result)
-    url_checks_repo.close()
+    UrlChecksRepo.add_url_check(check_result)
     flash('Страница успешно проверена', 'success')
 
     return redirect(url_for('show_url', id=id))

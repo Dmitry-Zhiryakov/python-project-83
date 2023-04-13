@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 URL_LENGTH = 255
 
 
-def validate(url):
+def validate_url(url):
     errors = []
     if len(url) > URL_LENGTH:
         errors.append('URL превышает 255 символов')
@@ -16,6 +16,6 @@ def validate(url):
     return errors
 
 
-def normalize(url):
+def normalize_url(url):
     components = urlparse(url)
     return f"{components.scheme}://{components.netloc}"
