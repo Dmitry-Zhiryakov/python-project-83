@@ -1,6 +1,6 @@
 import os
 import requests
-from page_analyzer.urls_repo import UrlsRepo, UrlChecksRepo
+from page_analyzer import urls_repo
 from page_analyzer.validator import validate_url, normalize_url
 from bs4 import BeautifulSoup
 from flask import (
@@ -25,7 +25,7 @@ def index():
 
 @app.route('/urls', methods=['GET'])
 def get_urls():
-    urls = UrlsRepo.find_all()
+    urls = urls_repo.get_all_urls()
     return render_template('urls.html', urls=urls)
 
 
@@ -42,13 +42,13 @@ def add_url():
         ), 422
 
     normalized_url = normalize_url(url)
-    found_url = UrlsRepo.get_by_name(normalized_url)
+    found_url = urls_repo.get_url_by_name(normalized_url)
 
     if found_url:
         id = found_url.id
         flash('Страница уже существует', 'info')
     else:
-        id = UrlsRepo.add_url(normalized_url)
+        id = urls_repo.add_url(normalized_url)
         flash('Страница успешно добавлена', 'success')
 
     return redirect(url_for('show_url', id=id,))
@@ -57,8 +57,8 @@ def add_url():
 @app.route('/urls/<int:id>', methods=['GET'])
 def show_url(id):
     messages = get_flashed_messages(with_categories=True)
-    url = UrlsRepo.get_by_id(id)
-    checks = UrlChecksRepo.get_checks_by_id(id)
+    url = urls_repo.get_url_by_id(id)
+    checks = urls_repo.get_checks_by_id(id)
     return render_template(
         'url.html',
         messages=messages,
@@ -67,7 +67,7 @@ def show_url(id):
     )
 
 
-def get_check_result(page):
+def get_page_content(page):
     soup = BeautifulSoup(page, 'html.parser')
 
     h1 = soup.find('h1').get_text() if soup.find('h1') else ''
@@ -87,7 +87,7 @@ def get_check_result(page):
 
 @app.route('/urls/<id>/checks', methods=['POST'])
 def add_check_url(id):
-    url = UrlsRepo.get_by_id(id)
+    url = urls_repo.get_url_by_id(id)
 
     try:
         response = requests.get(url.name)
@@ -100,9 +100,9 @@ def add_check_url(id):
     check_result = {
         'url_id': id,
         'status_code': response.status_code,
-        **get_check_result(page)
+        **get_page_content(page)
     }
-    UrlChecksRepo.add_url_check(check_result)
+    urls_repo.add_url_check(check_result)
     flash('Страница успешно проверена', 'success')
 
     return redirect(url_for('show_url', id=id))
