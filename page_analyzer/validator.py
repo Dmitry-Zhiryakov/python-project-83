@@ -8,11 +8,11 @@ URL_LENGTH = 255
 def validate_url(url):
     errors = []
     if len(url) > URL_LENGTH:
-        errors.append('URL превышает 255 символов')
+        errors.append(('danger', f"URL превышает {URL_LENGTH} символов"))
     if not validator_url(url):
-        errors.append('Некорректный URL')
+        errors.append(('danger', 'Некорректный URL'))
     if not url:
-        errors.append('URL обязателен')
+        errors.append(('danger', 'URL обязателен'))
     return errors
 
 
