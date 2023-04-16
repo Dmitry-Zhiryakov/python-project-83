@@ -37,7 +37,7 @@ def add_url():
     if errors:
         return render_template(
             'index.html',
-            errors=errors,
+            messages=errors,
             url=url
         ), 422
 
