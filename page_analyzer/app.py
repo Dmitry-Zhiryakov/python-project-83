@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+import psycopg2
 import requests
 from page_analyzer import urls_repo
 from page_analyzer.validator import validate_url, normalize_url
@@ -13,9 +15,16 @@ from flask import (
     get_flashed_messages
 )
 
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+
+def open_connection():
+    return psycopg2.connect(DATABASE_URL)
 
 
 @app.route('/')
@@ -25,12 +34,15 @@ def index():
 
 @app.route('/urls', methods=['GET'])
 def get_urls():
-    urls = urls_repo.get_all_urls()
+    conn = open_connection()
+    urls = urls_repo.get_all_urls(conn)
+    conn.close()
     return render_template('urls.html', urls=urls)
 
 
 @app.route('/urls', methods=['POST'])
 def add_url():
+    conn = open_connection()
     url = request.form['url']
 
     errors = validate_url(url)
@@ -42,23 +54,27 @@ def add_url():
         ), 422
 
     normalized_url = normalize_url(url)
-    found_url = urls_repo.get_url_by_name(normalized_url)
+    found_url = urls_repo.get_url_by_name(conn, normalized_url)
 
     if found_url:
         id = found_url.id
         flash('Страница уже существует', 'info')
     else:
-        id = urls_repo.add_url(normalized_url)
+        id = urls_repo.add_url(conn, normalized_url)
+        conn.commit()
         flash('Страница успешно добавлена', 'success')
 
+    conn.close()
     return redirect(url_for('show_url', id=id,))
 
 
 @app.route('/urls/<int:id>', methods=['GET'])
 def show_url(id):
+    conn = open_connection()
     messages = get_flashed_messages(with_categories=True)
-    url = urls_repo.get_url_by_id(id)
-    checks = urls_repo.get_checks_by_id(id)
+    url = urls_repo.get_url_by_id(conn, id)
+    checks = urls_repo.get_checks_by_id(conn, id)
+    conn.close()
     return render_template(
         'url.html',
         messages=messages,
@@ -69,7 +85,8 @@ def show_url(id):
 
 @app.route('/urls/<id>/checks', methods=['POST'])
 def add_check_url(id):
-    url = urls_repo.get_url_by_id(id)
+    conn = open_connection()
+    url = urls_repo.get_url_by_id(conn, id)
 
     try:
         response = requests.get(url.name)
@@ -84,7 +101,7 @@ def add_check_url(id):
         'status_code': response.status_code,
         **get_page_content(page)
     }
-    urls_repo.add_url_check(check_result)
+    urls_repo.add_url_check(conn, check_result)
+    conn.commit()
     flash('Страница успешно проверена', 'success')
-
     return redirect(url_for('show_url', id=id))
