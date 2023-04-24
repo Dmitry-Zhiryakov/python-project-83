@@ -24,7 +24,8 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 
 
 def open_connection():
-    return psycopg2.connect(DATABASE_URL)
+    with psycopg2.connect(DATABASE_URL) as conn:
+        return conn
 
 
 @app.route('/')
@@ -36,7 +37,6 @@ def index():
 def get_urls():
     conn = open_connection()
     urls = urls_repo.get_all_urls(conn)
-    conn.close()
     return render_template('urls.html', urls=urls)
 
 
@@ -64,7 +64,6 @@ def add_url():
         conn.commit()
         flash('Страница успешно добавлена', 'success')
 
-    conn.close()
     return redirect(url_for('show_url', id=id,))
 
 
@@ -74,7 +73,6 @@ def show_url(id):
     messages = get_flashed_messages(with_categories=True)
     url = urls_repo.get_url_by_id(conn, id)
     checks = urls_repo.get_checks_by_id(conn, id)
-    conn.close()
     return render_template(
         'url.html',
         messages=messages,
